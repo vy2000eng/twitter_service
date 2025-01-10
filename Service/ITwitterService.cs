@@ -6,5 +6,8 @@ public interface ITwitterService
 { 
     Task<bool>  PostTweetAsync(PostTweetRequestDto msg);
 
-    public Task ExposingApiCall();
+    //public Task ExposingApiCall();
+
+    public Task MakeLeftPost();
+    public Task MakeRightPost();
 }

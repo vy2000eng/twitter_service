@@ -18,33 +18,55 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        
-        var executionTimes = new[] { 8, 10, 12, 14, 16, 18, 20,22 };  // 7 posts daily
+        var leftTimes = new[] { 800, 930, 1100, 1230, 1400, 1530, 1700, 1830 };    // Left news times
+        var rightTimes = new[] { 845, 1015, 1145, 1315, 1445, 1615, 1745, 1915 };
 
         while (!stoppingToken.IsCancellationRequested)
         {
             var now = DateTime.Now;
-            var nextRunHour = executionTimes
-                .Where(h => h > now.Hour)
-                .Cast<int?>()
-                .FirstOrDefault() ?? executionTimes[0];
-            
-            var nextRun = now.Date.AddHours(nextRunHour);
-            
-            if (nextRunHour <= now.Hour)
-                nextRun = nextRun.AddDays(1);
-            
-            var delay = nextRun - now;
+            var currentTime = now.Hour * 100 + now.Minute;
+
+            // Find next post time
+            var nextLeftTime = leftTimes.FirstOrDefault(t => t > currentTime);
+            var nextRightTime = rightTimes.FirstOrDefault(t => t > currentTime);
+
+            // If no times left today, use first time tomorrow
+            if (nextLeftTime == 0 && nextRightTime == 0)
+            {
+                nextLeftTime = leftTimes[0];
+                nextRightTime = rightTimes[0];
+                now = now.Date.AddDays(1);
+            }
+
+            // Calculate next run time based on whichever comes first
+            var nextRunTime = (nextLeftTime == 0 || (nextRightTime != 0 && nextRightTime < nextLeftTime)) 
+                ? nextRightTime 
+                : nextLeftTime;
+
+            var nextRun = now.Date.AddHours(nextRunTime / 100).AddMinutes(nextRunTime % 100);
+            var delay = nextRun - DateTime.Now;
+
+            _logger.LogInformation($"Next post scheduled for: {nextRun}");
             await Task.Delay(delay, stoppingToken);
 
             using (var scope = _serviceProvider.CreateScope())
             {
                 var twitterService = scope.ServiceProvider.GetRequiredService<ITwitterService>();
-                await twitterService.ExposingApiCall();
+            
+                // Determine if it's a left post time
+                var isLeftPost = leftTimes.Contains(nextRunTime);
+            
+                if (isLeftPost)
+                {
+                    _logger.LogInformation("Making left post");
+                    await twitterService.MakeLeftPost();
+                }
+                else
+                {
+                    _logger.LogInformation("Making right post");
+                    await twitterService.MakeRightPost();
+                }
             }
-            //Environment.Exit(0);
-
         }
-        
     }
 }

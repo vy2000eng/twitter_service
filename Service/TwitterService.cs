@@ -32,20 +32,25 @@ public class TwitterService : ITwitterService
         _AnalysisApiEndpoint = configuration["Twitter:BaseAnalysisApiUrl"];
     }
 
-    public async Task ExposingApiCall()
+    public async Task MakeLeftPost()
     {
-        var leftNewsTweet = new PostTweetRequestDto
+       
+        
+        var leftNewsTweet= new PostTweetRequestDto
         {
             Text = await GetTldrAnalysis(1)
          
         };
-        
-        var rightNewsTweet= new PostTweetRequestDto
+        await PostTweetAsync(leftNewsTweet);
+    }
+    
+    public async Task MakeRightPost()
+    {
+        var rightNewsTweet = new PostTweetRequestDto
         {
             Text = await GetTldrAnalysis(2)
          
         };
-        await PostTweetAsync(leftNewsTweet);
         await PostTweetAsync(rightNewsTweet);
     }
 
