@@ -1,11 +1,14 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using IBM.Cloud.SDK.Core.Service;
 using Microsoft.EntityFrameworkCore;
 using Tweetinvi;
 using Tweetinvi.Models;
 using twitter_service.Data;
 using twitter_service.Model;
+using twitter_service.Model.ModelUtils;
+using twitter_service.Service;
 
 namespace twitter_service.Service;
 
@@ -16,12 +19,14 @@ public class TwitterService : ITwitterService
     private readonly string _accessToken;
     private readonly string _accessTokenSecret;
     private readonly string _AnalysisApiEndpoint;
+    private readonly IbmWatsonNluService _nluService;
+
     //private readonly string _TwitterApiEndpoint;
     private readonly textyContext _context;
     private readonly OpenAiService _openAiService;
     
 
-    public TwitterService(IConfiguration configuration, textyContext context, OpenAiService openAiService)
+    public TwitterService(IConfiguration configuration, textyContext context, OpenAiService openAiService, IbmWatsonNluService nluService)
     {
         _context             = context;
         _openAiService       = openAiService;
@@ -30,6 +35,7 @@ public class TwitterService : ITwitterService
         _ApiKey              = configuration["Twitter:ApiKey"];
         _ApiSecret           = configuration["Twitter:ApiKeySecret"];
         _AnalysisApiEndpoint = configuration["Twitter:BaseAnalysisApiUrl"];
+        _nluService          = nluService;
     }
 
     public async Task MakeLeftPost()
@@ -41,7 +47,7 @@ public class TwitterService : ITwitterService
             Text = await GetTldrAnalysis(1)
          
         };
-        await PostTweetAsync(leftNewsTweet);
+       await PostTweetAsync(leftNewsTweet);
     }
     
     public async Task MakeRightPost()
@@ -94,24 +100,38 @@ public class TwitterService : ITwitterService
             .OrderByDescending(nf => nf.PublishDate)
             .FirstOrDefaultAsync();
         HttpClient client = new HttpClient();
-       var response = await client.GetAsync(
+      
+        var response = await client.GetAsync(
            $"{_AnalysisApiEndpoint}{article.Id}?articleUrl={Uri.EscapeDataString(article.Link)}");
+       
+       var analyzedSentiment = _nluService.AnalyzeUrl(article.Link);
+       var hashtags = ModelUtilsClass.ExtractKeywords(analyzedSentiment)
+           .Where(tag => tag.Relevance > 0.5)
+           .Select(tag => $"#{tag.Keyword.Replace(" ", "")}")  // Remove all spaces, then add #
+           .ToList();
+
+        var hashtagString = string.Join(" ", hashtags);
+     
+       
+     
        var result = new TwitterPost
        {
            LeftRightNews = leftRight==1 ? "Left News": "Right News",
            AnalysisUrl = response.RequestMessage.RequestUri.ToString(),
            TldrSummary = await _openAiService.TLDRArticle(article.Link),
-           ArticleUrl = article.Link
+           ArticleUrl = article.Link,
+           Hashtags = hashtagString
        };
 
-       return "\t" + result.LeftRightNews + " - " + result.AnalysisUrl +
-              "\n" + result.TldrSummary +
-              "\n" + result.ArticleUrl;
-
-
-
-
-
+       // Format the tweet with a cleaner structure
+        // 📰 indicates news
+        // 📝 indicates summary
+        // 🔗 indicates link
+       return $"📰 {result.LeftRightNews + " | " +result.AnalysisUrl}\n" +
+              $"📝 {result.TldrSummary}\n" +
+              $"🔗 {result.ArticleUrl}\n\n" +
+              result.Hashtags;
+       
     }
 
 

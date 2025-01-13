@@ -12,10 +12,10 @@ public class AnalysisModel
 
 public class Keywords
 {
-    public int Id { get; set; }
+   // public int Id { get; set; }
     public string Keyword { get; set; }
     public double Relevance { get; set; }
-    public Emotion EmotionList { get; set; }
+   // public Emotion EmotionList { get; set; }
 }
 
 public class Emotion

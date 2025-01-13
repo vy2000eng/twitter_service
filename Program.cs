@@ -25,6 +25,7 @@ builder.Services.AddHostedService<Worker>();
 // Services that should be Scoped or Transient, not Singleton
 builder.Services.AddScoped<ITwitterService, TwitterService>();
 builder.Services.AddScoped<OpenAiService>();
+builder.Services.AddScoped<IbmWatsonNluService>();
 
 
 

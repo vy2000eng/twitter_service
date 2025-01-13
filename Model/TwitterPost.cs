@@ -7,5 +7,7 @@ public class TwitterPost
 
     public string TldrSummary { get; set; }
     public string ArticleUrl{ get; set; }
+    
+    public string Hashtags { get; set; }
 
 }
