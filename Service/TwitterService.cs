@@ -107,9 +107,11 @@ public class TwitterService : ITwitterService
        var analyzedSentiment = _nluService.AnalyzeUrl(article.Link);
        var hashtags = ModelUtilsClass.ExtractKeywords(analyzedSentiment)
            .Where(tag => tag.Relevance > 0.5)
-           .Select(tag => $"#{tag.Keyword.Replace(" ", "")}")  // Remove all spaces, then add #
+           .Select(tag => $"#{new string(tag.Keyword
+               .Replace(" ", "")
+               .Where(c => char.IsLetterOrDigit(c))  // Only keep letters and numbers
+               .ToArray())}")
            .ToList();
-
         var hashtagString = string.Join(" ", hashtags);
      
        
@@ -117,9 +119,9 @@ public class TwitterService : ITwitterService
        var result = new TwitterPost
        {
            LeftRightNews = leftRight==1 ? "Left News": "Right News",
+           Source = ModelUtilsClass.ExtractPublisherFromUrl(article.Link),
            AnalysisUrl = response.RequestMessage.RequestUri.ToString(),
            TldrSummary = await _openAiService.TLDRArticle(article.Link),
-           ArticleUrl = article.Link,
            Hashtags = hashtagString
        };
 
@@ -127,10 +129,9 @@ public class TwitterService : ITwitterService
         // 📰 indicates news
         // 📝 indicates summary
         // 🔗 indicates link
-       return $"📰 {result.LeftRightNews + " | " +result.AnalysisUrl}\n" +
-              $"📝 {result.TldrSummary}\n" +
-              $"🔗 {result.ArticleUrl}\n\n" +
-              result.Hashtags;
+        return $"📰 {result.Source} | {result.LeftRightNews} | {result.AnalysisUrl}\n" +
+               $"📝 {result.TldrSummary}\n" +
+               result.Hashtags;
        
     }
 

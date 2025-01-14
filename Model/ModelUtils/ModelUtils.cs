@@ -37,4 +37,31 @@ public static class ModelUtilsClass
     
         return keywords;
     }
+    public static string ExtractPublisherFromUrl(string url)
+    {
+        try
+        {
+            Uri uri = new Uri(url);
+            string host = uri.Host;
+        
+            // Remove 'www.' if present
+            if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            {
+                host = host.Substring(4);
+            }
+        
+            // Extract the domain name (e.g., 'cnn.com' from 'www.cnn.com')
+            string[] parts = host.Split('.');
+            if (parts.Length >= 2)
+            {
+                return parts[parts.Length - 2].ToUpper();
+            }
+        
+            return host.ToUpper();
+        }
+        catch
+        {
+            return "UNKNOWN";
+        }
+    }
 }
