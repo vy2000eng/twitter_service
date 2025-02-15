@@ -100,9 +100,9 @@ public class TwitterService : ITwitterService
             .OrderByDescending(nf => nf.PublishDate)
             .FirstOrDefaultAsync();
         HttpClient client = new HttpClient();
-      
-        var response = await client.GetAsync(
-           $"{_AnalysisApiEndpoint}{article.Id}?articleUrl={Uri.EscapeDataString(article.Link)}");
+
+        var response =
+            $"{_AnalysisApiEndpoint}{article.ArticleId}?articleUrl={Uri.EscapeDataString(article.Link)}";
        
        var analyzedSentiment = _nluService.AnalyzeUrl(article.Link);
        var hashtags = ModelUtilsClass.ExtractKeywords(analyzedSentiment)
@@ -120,7 +120,7 @@ public class TwitterService : ITwitterService
        {
            LeftRightNews = leftRight==1 ? "Left News": "Right News",
            Source = ModelUtilsClass.ExtractPublisherFromUrl(article.Link),
-           AnalysisUrl = response.RequestMessage.RequestUri.ToString(),
+           AnalysisUrl = response,
            TldrSummary = await _openAiService.TLDRArticle(article.Link),
            Hashtags = hashtagString
        };
